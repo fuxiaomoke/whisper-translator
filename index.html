@@ -1,16 +1,132 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-  <title>Whisper Translator</title>
-  <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/babel-standalone@6.26.0/babel.min.js"></script>
-  <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SRT 字幕翻译工具</title>
+    <!-- 先引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-  <div id="root"></div>
-  <script type="text/babel" src="whisper-trans.jsx"></script>
+<body class="min-h-screen bg-gray-50 p-6">
+    <div class="max-w-6xl mx-auto">
+        <!-- 标题区域 -->
+        <h1 class="text-3xl font-bold text-gray-800 mb-8 flex items-center">
+            <i data-lucide="languages" class="mr-2"></i> 
+            SRT 字幕翻译工具
+        </h1>
+
+        <!-- 主要内容区域 -->
+        <div class="flex flex-col md:flex-row gap-6">
+            <!-- 左侧输入区域 -->
+            <div class="flex-1 flex flex-col gap-6">
+                <!-- 文本输入框 -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">文本输入</h2>
+                    <textarea 
+                        id="inputText"
+                        class="w-full h-64 p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="在此粘贴日语SRT字幕内容..."></textarea>
+                </div>
+
+                <!-- 文件上传区域 -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">文件上传</h2>
+                    <div 
+                        id="dropZone"
+                        class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:bg-gray-50 transition-colors">
+                        <i data-lucide="upload" class="mx-auto text-gray-400 mb-2"></i>
+                        <p class="text-gray-500 mb-2">点击或拖拽SRT文件到此处</p>
+                        <p class="text-sm text-gray-400">支持.srt格式文件</p>
+                        <input 
+                            type="file"
+                            id="fileInput"
+                            class="hidden"
+                            accept=".srt">
+                    </div>
+                    <div id="fileName" class="mt-4 flex items-center text-blue-600 hidden">
+                        <i data-lucide="file-text" class="mr-2"></i>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧输出区域 -->
+            <div class="flex-1 bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">翻译结果</h2>
+                <div class="w-full h-96 p-4 border border-gray-200 rounded-lg bg-gray-50 overflow-auto relative">
+                    <div id="translatingIndicator" class="hidden h-full flex items-center justify-center">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                        <p class="ml-4 text-gray-600">正在翻译中...</p>
+                    </div>
+                    <pre id="outputText" class="whitespace-pre-wrap font-sans"></pre>
+                    <div id="outputPlaceholder" class="h-full flex items-center justify-center text-gray-400">
+                        <p>翻译结果将显示在这里...</p>
+                    </div>
+                </div>
+                
+                <div id="errorMessage" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 flex items-start hidden">
+                    <i data-lucide="alert-circle" class="mr-2 flex-shrink-0 mt-0.5"></i>
+                    <p></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作按钮区域 -->
+        <div class="mt-8 flex justify-center space-x-4">
+            <button
+                id="settingsButton"
+                class="px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors text-lg font-medium flex items-center">
+                <i data-lucide="settings" class="mr-2"></i>
+                翻译模型设置
+            </button>
+
+            <button
+                id="translateButton"
+                class="px-8 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors text-lg font-medium flex items-center">
+                开始翻译
+            </button>
+        </div>
+
+        <!-- 当前模型显示 -->
+        <div class="mt-6 flex justify-center">
+            <div id="modelIndicator" class="inline-flex items-center px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
+                <i data-lucide="alert-circle" class="mr-1"></i>
+                未设置翻译模型
+            </div>
+        </div>
+
+        <!-- 设置模态框 -->
+        <div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <!-- 模态框内容将通过 JavaScript 动态插入 -->
+        </div>
+
+        <!-- 下载模态框 -->
+        <div id="downloadModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <!-- 模态框内容将通过 JavaScript 动态插入 -->
+        </div>
+
+        <!-- 页脚 -->
+        <footer class="mt-12 text-center text-gray-500 text-sm">
+            <p>created by <a href="https://space.coze.cn" class="text-blue-600 hover:underline">coze space</a> | 页面内容均由 AI 生成，仅供参考</p>
+        </footer>
+    </div>
+
+    <!-- 模态框模板 -->
+    <template id="settingsModalTemplate">
+        <div class="bg-white rounded-xl shadow-xl p-6 max-w-md w-full">
+            <!-- 设置模态框的内容将通过 JavaScript 动态生成 -->
+        </div>
+    </template>
+
+    <template id="downloadModalTemplate">
+        <div class="bg-white rounded-xl shadow-xl p-6 max-w-md w-full">
+            <!-- 下载模态框的内容将通过 JavaScript 动态生成 -->
+        </div>
+    </template>
+
+    <script src="script.js"></script>
 </body>
 </html>
